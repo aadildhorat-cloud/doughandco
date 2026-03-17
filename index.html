@@ -1662,7 +1662,7 @@ footer {
 <!-- FLOATING CONTACT BUTTONS -->
 <div class="floating-contact">
     <!-- WhatsApp Button -->
-    <button class="float-btn whatsapp-float" onclick="window.open('https://wa.me/27670048277', '_blank')" title="WhatsApp">
+    <button class="float-btn whatsapp-float" onclick="window.open('https://wa.me/27822597009', '_blank')" title="WhatsApp">
         <i class="fab fa-whatsapp"></i>
     </button>
 </div>
@@ -1979,7 +1979,7 @@ function sendCartToWhatsApp() {
         msg += `• ${item.name} x${item.quantity} — R${(item.price * item.quantity).toFixed(2)}\n`;
     });
     msg += `\nTotal: R${cart.calculateTotal()}\nThank you!`;
-    const url = `https://wa.me/27670048277?text=${encodeURIComponent(msg)}`;
+    const url = `https://wa.me/27822597009?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
 }
 
