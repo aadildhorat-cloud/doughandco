@@ -1,82 +1,147 @@
 /**
-🍪 DOUGH & CO - Centralized Product Data & Utilities
-📁 Recommended Path: /doughandco/js/products-dough-co.js
-🔗 Usage: Include this exact script on BOTH Hive Times & DOUGH & CO pages.
-✅ Edit the RAW_PRODUCTS array below → Auto-syncs across all linked sites.
+🍪 Dough & Co - Centralized Product Data & Utilities
+📁 Path: /doughandco/js/products-dough-co.js
+✅ MODE: Google Sheets (Live) + Fallback
 */
 (function () {
-  // 📌 ASSET CONFIGURATION
   const CONFIG = {
     basePath: "",
     imageDir: "/doughandco/images",
-    fallbackImage: "/doughandco/images/dough-and-co-logo.jpg",
-    businessName: "DOUGH & CO",
-    businessLogo: "/doughandco/images/dough-and-co-logo.jpg"
+    fallbackImage: "/images/logo.jpg",
+    businessName: "Dough & Co",
+    businessLogo: "/doughandco/images/doughandco-logo.jpg",
+    sheetsApiUrl: "https://script.google.com/macros/s/AKfycbyxIhWlmoT9ZiQXaXp6Xj40coLGgm8pdn73RUmfQ4Lto99AQk0KSfDOX4eOwh45g1XvyA/exec",
+    fetchTimeout: 8000,
+    cacheKey: "doughco_products_cache",
+    cacheDuration: 15 * 60 * 1000
   };
 
-  // 📦 RAW PRODUCT DATA - ✏️ EDIT THIS ARRAY TO UPDATE EVERYWHERE
+  let _products = null, _loadPromise = null, _lastFetchTime = 0;
+
   const RAW_PRODUCTS = [
-    // === 🍪 BUTTER BISCUITS (category: "butter-biscuits") ===
-    { id: "butter-bisc-1", name: "Classic Butter Biscuits", price: 45.00, category: "butter-biscuits", description: "Rich, melt-in-your-mouth traditional butter biscuits.", badge: "🔥 Popular" },
-    { id: "butter-bisc-2", name: "Chocolate Chip Butter Biscuits", price: 55.00, category: "butter-biscuits", description: "Buttery base studded with premium chocolate chips.", badge: "🍫 New" },
-
-    // === 🍪 SUGAR COOKIES (category: "sugar-cookies") ===
-    { id: "sugar-cookie-1", name: "Classic Vanilla Sugar Cookies", price: 50.00, category: "sugar-cookies", description: "Crisp, sweet, and perfectly shaped vanilla sugar cookies.", badge: "⭐ Best Seller" },
-    { id: "sugar-cookie-2", name: "Decorated Iced Sugar Cookies", price: 65.00, category: "sugar-cookies", description: "Hand-iced sugar cookies perfect for celebrations.", badge: "🎉 Party Ready" },
-
-    // === 🫖 TEA CAKES (category: "tea-cakes") ===
-    { id: "tea-cake-1", name: "Mini Fruit Tea Cakes", price: 40.00, category: "tea-cakes", description: "Light, fluffy tea cakes loaded with mixed dried fruits.", badge: "☕ Tea Time" },
-    { id: "tea-cake-2", name: "Lemon Zest Tea Cakes", price: 45.00, category: "tea-cakes", description: "Zesty lemon-flavored tea cakes with a sweet glaze.", badge: "🍋 Citrus Fresh" },
-
-    // === 🌰 ALMOND ROCCA (category: "almond-rocca") ===
-    { id: "almond-rocca-1", name: "Classic Almond Rocca", price: 75.00, category: "almond-rocca", description: "Crunchy almonds coated in rich milk chocolate.", badge: "🥜 Nutty Favorite" },
-    { id: "almond-rocca-2", name: "Dark Chocolate Almond Rocca", price: 80.00, category: "almond-rocca", description: "Premium roasted almonds in dark chocolate coating.", badge: "🍫 Gourmet" }
+    { id: "flake", name: "Flake Butter Biscuits", price: 125, category: "butter-biscuits", niche: "baking", type: "baking", location: "gauteng", description: "Premium flake butter biscuits with layers of delicate, buttery goodness.", badge: "🔥 Best Seller", businessName: "Dough & Co", businessLogo: "/doughandco/images/doughandco-logo.jpg", customImage: null },
+    { id: "nuttyflakes", name: "Nutty Flake Butter Biscuits", price: 125, category: "butter-biscuits", niche: "baking", location: "gauteng", description: "Classic flake biscuits topped with roasted nuts for extra crunch.", badge: "🔥 Best Seller", businessName: "Dough & Co", businessLogo: "/doughandco/images/doughandco-logo.jpg", customImage: null },
+    { id: "1kgassorted", name: "Assorted Butter Biscuits", price: 130, category: "butter-biscuits", niche: "baking", location: "gauteng", description: "A curated selection of our most popular butter biscuit flavours.", badge: "✨ Value Pack", businessName: "Dough & Co", businessLogo: "/doughandco/images/doughandco-logo.jpg", customImage: null },
+    { id: "1kgassorted", name: "500g Assorted Butter Biscuits", price: 130, category: "butter-biscuits", niche: "baking", location: "gauteng", description: "A curated selection of our most popular butter biscuit flavours.", badge: "✨ Value Pack", businessName: "Dough & Co", businessLogo: "/doughandco/images/doughandco-logo.jpg", customImage: null },
+    { id: "mintaero", name: "Mint Aero Butter Biscuits", price: 115, category: "butter-biscuits", niche: "baking", location: "gauteng", description: "Refreshing mint-infused butter biscuits with a light, airy texture.", badge: "🔥 Best Seller", businessName: "Dough & Co", businessLogo: "/doughandco/images/doughandco-logo.jpg", customImage: null },
+    { id: "peppermint", name: "Peppermint Butter Biscuits", price: 115, category: "butter-biscuits", niche: "baking", location: "gauteng", description: "Classic peppermint flavour in a crisp, buttery biscuit base.", badge: "🔥 Best Seller", businessName: "Dough & Co", businessLogo: "/doughandco/images/doughandco-logo.jpg", customImage: null },
+    { id: "diycookies", name: "DIY Cookies", price: 360, category: "sugar-cookies", niche: "baking", location: "gauteng", description: "Customize your own batch of delicious sugar cookies, R360 per kg.", badge: "🔥 Best Seller", businessName: "Dough & Co", businessLogo: "/doughandco/images/doughandco-logo.jpg", customImage: null },
+    { id: "almondroca", name: "Classic Almond Rocca", price: 40, category: "almond-rocca", niche: "baking", location: "gauteng", description: "Fan-favourite toffee-almond clusters in a cute clear tin with handle.", badge: "🎁 Gift Ready", businessName: "Dough & Co", businessLogo: "/doughandco/images/doughandco-logo.jpg", customImage: null }
   ];
 
-  // 🔄 Process & Attach Metadata + Image Paths
-  const PROCESSED = RAW_PRODUCTS.map(product => ({
-    ...product,
-    image: `${CONFIG.basePath}${CONFIG.imageDir}/${product.id}.jpg`,
-    imageFallback: `${CONFIG.basePath}${CONFIG.fallbackImage}`,
-    businessName: CONFIG.businessName,
-    businessLogo: `${CONFIG.basePath}${CONFIG.businessLogo}`,
-    categorySlug: product.category.trim().toLowerCase()
-  }));
+  function processProducts(raw) {
+    if (!Array.isArray(raw)) return [];
+    return raw.map(p => {
+      const clean = (val) => typeof val === 'string' ? val.trim() : val;
+      return {
+        ...p,
+        id: clean(p.id), name: clean(p.name), category: clean(p.category),
+        niche: clean(p.niche), type: clean(p.type), location: clean(p.location),
+        description: clean(p.description), badge: clean(p.badge),
+        businessName: clean(p.businessName) || CONFIG.businessName,
+        businessLogo: clean(p.businessLogo) || CONFIG.businessLogo,
+        image: p.customImage ? clean(p.customImage) : `${CONFIG.basePath}${CONFIG.imageDir}/${clean(p.id)}.jpg`,
+        imageFallback: `${CONFIG.basePath}${CONFIG.fallbackImage}`,
+        categorySlug: (clean(p.category) || "").toLowerCase(),
+        locationSlug: (clean(p.location) || "gauteng").toLowerCase(),
+        nicheSlug: (clean(p.niche) || "baking").toLowerCase()
+      };
+    });
+  }
 
-  // 🌐 Global Export (Used by both websites)
-  window.DOUGH_CO_PRODUCTS = PROCESSED;
-  // 🔄 Backward compatibility
-  window.DOUGH_DATA = PROCESSED;
+  function loadFromCache() {
+    try {
+      const c = localStorage.getItem(CONFIG.cacheKey);
+      if (!c) return null;
+      const { data, timestamp } = JSON.parse(c);
+      if (Date.now() - timestamp < CONFIG.cacheDuration) {
+        console.log("🗃️ Loaded from cache");
+        return processProducts(data);
+      }
+      return null;
+    } catch (e) { return null; }
+  }
 
-  // 🛠️ Utility API for both sites
-  window.DoughCoProducts = {
-    getAll: () => window.DOUGH_CO_PRODUCTS,
-    getById: (id) => window.DOUGH_CO_PRODUCTS.find(p => p.id === id),
-    getByCategory: (category) => window.DOUGH_CO_PRODUCTS.filter(p => p.categorySlug === category.toLowerCase()),
-    getImageUrl: (productId, useFallback = true) => {
-      const product = window.DOUGH_CO_PRODUCTS.find(p => p.id === productId);
-      return product ? product.image : (useFallback ? `${CONFIG.basePath}${CONFIG.fallbackImage}` : null);
-    },
-    // Optional: Lightweight HTML generator
-    renderCard: (p) => `
-      <div class="product-card" data-id="${p.id}">
-        <img src="${p.image}" alt="${p.name}" loading="lazy" onerror="this.src='${p.imageFallback}'">
-        ${p.badge ? `<span class="product-badge">${p.badge}</span>` : ''}
-        <div class="product-info">
-          <h3 class="product-name">${p.name}</h3>
-          <p class="product-description">${p.description}</p>
-          <div class="product-price">R${p.price.toFixed(2)}</div>
-          <button class="add-to-cart-btn" data-product-id="${p.id}" onclick="addToCart({id:'${p.id}',name:'${p.name.replace(/'/g, "\\'")}',price:${p.price},image:'${p.image}',businessName:'${p.businessName}',businessLogo:'${p.businessLogo}'})">Add to Cart</button>
-        </div>
-      </div>
-    `
-  };
+  function saveToCache(data) {
+    try { localStorage.setItem(CONFIG.cacheKey, JSON.stringify({ data, timestamp: Date.now() })); } catch (e) {}
+  }
 
-  // 📊 Dev Console
-  console.group("🍪 DOUGH & CO Products Synced");
-  console.log(`✅ ${PROCESSED.length} products loaded`);
-  const grouped = {};
-  PROCESSED.forEach(p => (grouped[p.categorySlug] = grouped[p.categorySlug] || []).push(p.name));
-  Object.entries(grouped).forEach(([cat, items]) => console.log(`📁 ${cat}: ${items.length} items`));
-  console.groupEnd();
+  function fetchProducts() {
+    if (!CONFIG.sheetsApiUrl || CONFIG.sheetsApiUrl.includes("YOUR_DEPLOYMENT_ID") || CONFIG.sheetsApiUrl.trim() === "") {
+      console.log("📦 Using embedded fallback data");
+      return Promise.resolve(RAW_PRODUCTS);
+    }
+    return new Promise((resolve, reject) => {
+      const tid = setTimeout(() => reject(new Error("Fetch timeout")), CONFIG.fetchTimeout);
+      const cb = `doughco_cb_${Date.now()}`;
+      window[cb] = (res) => { clearTimeout(tid); delete window[cb]; resolve(res?.products || res || []); };
+      const s = document.createElement("script");
+      s.src = `${CONFIG.sheetsApiUrl}?prefix=${cb}&t=${Date.now()}`;
+      s.onerror = () => { clearTimeout(tid); delete window[cb]; reject(new Error("Network error")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function loadProducts() {
+    if (_loadPromise) return _loadPromise;
+    const cached = loadFromCache();
+    if (cached) { _products = cached; initAPI(); return Promise.resolve(cached); }
+    _loadPromise = fetchProducts()
+      .then(raw => {
+        _products = processProducts(raw);
+        if (CONFIG.sheetsApiUrl && !CONFIG.sheetsApiUrl.includes("YOUR_DEPLOYMENT_ID") && CONFIG.sheetsApiUrl.trim() !== "") {
+          saveToCache(raw);
+        }
+        _lastFetchTime = Date.now(); initAPI();
+        console.group("🍪 Dough & Co Products Loaded");
+        console.log(`✅ ${_products.length} products`);
+        console.log(`🔄 Source: ${CONFIG.sheetsApiUrl?.trim() ? "Google Sheets (Live)" : "Embedded Fallback"}`);
+        console.groupEnd();
+        return _products;
+      })
+      .catch(err => {
+        console.warn("⚠️ Fetch failed, using fallback:", err.message);
+        _products = processProducts(RAW_PRODUCTS); initAPI(); return _products;
+      })
+      .finally(() => { _loadPromise = null; });
+    return _loadPromise;
+  }
+
+  function initAPI() {
+    window.DoughCoProducts = {
+      load: () => loadProducts(),
+      isLoaded: () => _products !== null,
+      getLastFetchTime: () => _lastFetchTime,
+      getAll: () => _products || [],
+      getById: (id) => (_products || []).find(p => p.id === id),
+      getByCategory: (cat) => (_products || []).filter(p => p.categorySlug === (cat || "").toLowerCase()),
+      getByLocation: (loc) => (_products || []).filter(p => p.locationSlug === (loc || "").toLowerCase()),
+      getByNiche: (niche) => (_products || []).filter(p => p.nicheSlug === (niche || "").toLowerCase()),
+      filter: ({ category, location, niche }) => (_products || []).filter(p => {
+        if (category && p.categorySlug !== category.toLowerCase()) return false;
+        if (location && p.locationSlug !== location.toLowerCase()) return false;
+        if (niche && p.nicheSlug !== niche.toLowerCase()) return false;
+        return true;
+      }),
+      getImageUrl: (id, fallback = true) => {
+        const p = (_products || []).find(x => x.id === id);
+        return p ? p.image : (fallback ? `${CONFIG.basePath}${CONFIG.fallbackImage}` : null);
+      },
+      renderCard: (p) => `<article class="product-card" data-id="${p.id}" data-price="${p.price}" data-name="${p.name}" data-description="${p.description}" data-image="${p.image}" data-category="${p.categorySlug}"><img src="${p.image}" alt="${p.name}" class="product-image" loading="lazy" onerror="this.src='${p.imageFallback}'">${p.badge ? `<span class="badge">${p.badge}</span>` : ''}<div class="product-info"><div class="product-name">${p.name}</div><div class="product-description">${p.description}</div><div class="product-price">R${p.price.toFixed(2)}</div><button class="add-to-cart-btn" data-product-id="${p.id}"><i class="fas fa-cart-plus"></i> Add to Cart</button></div></article>`,
+      getWhatsAppLink: (p, phone = "27123456789") => `https://wa.me/${phone}?text=${encodeURIComponent(`Hi, I'd like to order: ${p.name} (R${p.price}) from ${p.businessName}`)}`,
+      refresh: () => { localStorage.removeItem(CONFIG.cacheKey); _products = null; _loadPromise = null; return loadProducts(); }
+    };
+    if (_products) { window.DOUGH_AND_CO_PRODUCTS = _products; window.DOUGHANDCO_DATA = _products; }
+  }
+
+  loadProducts().catch(() => { _products = processProducts(RAW_PRODUCTS); initAPI(); });
+
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    loadProducts().then(ps => {
+      if (!ps || !ps.length) return;
+      const groups = {}; ps.forEach(p => { groups[p.categorySlug] = groups[p.categorySlug] || []; groups[p.categorySlug].push(p.name); });
+      console.group("🍪 Dough & Co Synced"); console.log(`✅ ${ps.length} products`);
+      Object.entries(groups).forEach(([cat, items]) => console.log(`📁 ${cat}: ${items.length} items`)); console.groupEnd();
+    });
+  }
 })();
