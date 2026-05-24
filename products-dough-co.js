@@ -10,7 +10,7 @@
     fallbackImage: "/images/logo.jpg",
     businessName: "Dough & Co",
     businessLogo: "/doughandco/images/doughandco-logo.jpg",
-    sheetsApiUrl: "https://script.google.com/macros/s/AKfycbyxIhWlmoT9ZiQXaXp6Xj40coLGgm8pdn73RUmfQ4Lto99AQk0KSfDOX4eOwh45g1XvyA/exec",
+    sheetsApiUrl: "https://docs.google.com/spreadsheets/d/1WeuXE6zkWwpAYt1HccH62bK7MwX6QvnI-l-IryOfFSM/edit?pli=1&gid=0#gid=0",
     fetchTimeout: 8000,
     cacheKey: "doughco_products_cache",
     cacheDuration: 15 * 60 * 1000
