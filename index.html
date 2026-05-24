@@ -2216,5 +2216,40 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 </script>
+
+<script>
+  function DoughCoProducts(data) {
+    if (data.error) {
+      console.error('? API Error:', data.error);
+      document.getElementById('products-container').innerHTML = '<p>Error loading products</p>';
+      return;
+    }
+    
+    console.log('? Products received:', data.products);
+    renderProducts(data.products); 
+  }
+  
+  function renderProducts(products) {
+    const container = document.getElementById('products-container');
+    if (!container) {
+      console.error('? No #products-container found in HTML');
+      return;
+    }
+    
+    container.innerHTML = products.map(p => `
+      <div class="product-card">
+        <h3>${p.name}</h3>
+        <p class="price">R${p.price}</p>
+        <p>${p.description || ''}</p>
+      </div>
+    `).join('');
+  }
+</script>
+
+
+<script src="https://script.google.com/macros/s/YOUR_WEB_APP_ID/exec?prefix=DoughCoProducts"></script>
+
+
+<div id="products-container">Loading products...</div>
 </body>
 </html>
