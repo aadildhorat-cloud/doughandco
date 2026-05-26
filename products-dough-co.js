@@ -10,8 +10,8 @@
     fallbackImage: "/images/logo.jpg",
     businessName: "Dough & Co",
     businessLogo: "/doughandco/images/doughandco-logo.jpg",
-  sheetsApiUrl: "https://script.google.com/macros/s/AKfycbwyXgJhiiE1H4o9trSI-NYhqtMUOrSQhApO7AhKL8Uifnx_zBRPpga1BKDD979pKY_WAA/exec?prefix=DoughCoProducts",
-  fetchTimeout: 8000,
+    sheetsApiUrl: "https://script.google.com/macros/s/AKfycbyxIhWlmoT9ZiQXaXp6Xj40coLGgm8pdn73RUmfQ4Lto99AQk0KSfDOX4eOwh45g1XvyA/exec",
+    fetchTimeout: 8000,
     cacheKey: "doughco_products_cache",
     cacheDuration: 15 * 60 * 1000
   };
