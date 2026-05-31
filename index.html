@@ -2216,5 +2216,153 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 </script>
+<!-- 🍪 doughandco/js/product-loader.js -->
+<script>
+(function() {
+  'use strict';
+  
+  const CONFIG = {
+    REPO: 'aadildhorat-cloud',
+    CDN_BASE: 'https://cdn.jsdelivr.net/gh',
+    API_FALLBACK: 'https://script.google.com/macros/s/YOUR_DEPLOYED_ID/exec', // 🔁 Replace with your ID
+    CACHE_KEY: 'doughco_products_v3',
+    CACHE_TTL: 15 * 60 * 1000 // 15 minutes
+  };
+  
+  // Detect which repo path to use
+  const IS_HIVE = window.location.hostname.includes('hivetimes') || 
+                  window.location.pathname.includes('doughandco');
+  const GITHUB_PATH = IS_HIVE 
+    ? 'doughandco/js/products-dough-co.js' 
+    : 'js/products-dough-co.js';
+  
+  /**
+   * Load products with 3-tier strategy:
+   * 1️⃣ localStorage cache (fastest)
+   * 2️⃣ jsDelivr CDN (fast + global)
+   * 3️⃣ Apps Script API fallback (reliable)
+   */
+  function loadProducts(callback) {
+    // 🔹 Tier 1: Check localStorage
+    const cached = getCachedProducts();
+    if (cached) {
+      console.log('📦 Loaded from localStorage:', cached.length, 'products');
+      callback(cached);
+      // Refresh in background for next visit
+      fetchFreshProducts().then(cacheProducts).catch(() => {});
+      return;
+    }
+    
+    // 🔹 Tier 2: Try CDN (jsDelivr)
+    loadFromCDN()
+      .then(products => {
+        console.log('🌐 Loaded from CDN:', products.length, 'products');
+        cacheProducts(products);
+        callback(products);
+      })
+      .catch(err => {
+        console.warn('⚠️ CDN failed, falling back to API:', err);
+        // 🔹 Tier 3: Fallback to live API
+        fetchFreshProducts()
+          .then(products => {
+            cacheProducts(products);
+            callback(products);
+          })
+          .catch(apiErr => {
+            console.error('❌ All sources failed:', apiErr);
+            callback([]); // Return empty to avoid breaking UI
+          });
+      });
+  }
+  
+  function getCachedProducts() {
+    try {
+      const raw = localStorage.getItem(CONFIG.CACHE_KEY);
+      if (!raw) return null;
+      const { data, timestamp, version } = JSON.parse(raw);
+      if (Date.now() - timestamp > CONFIG.CACHE_TTL) {
+        localStorage.removeItem(CONFIG.CACHE_KEY);
+        return null;
+      }
+      // Optional: Validate version matches static file
+      if (version && window.DOUGHCO_PRODUCTS_VERSION && version !== window.DOUGHCO_PRODUCTS_VERSION) {
+        return null; // Version mismatch = stale cache
+      }
+      return data;
+    } catch { return null; }
+  }
+  
+  function cacheProducts(products) {
+    try {
+      localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({
+        data: products,
+        timestamp: Date.now(),
+        version: window.DOUGHCO_PRODUCTS_VERSION || null
+      }));
+    } catch (e) {
+      console.warn('⚠️ localStorage full, skipping cache');
+    }
+  }
+  
+  function loadFromCDN() {
+    return new Promise((resolve, reject) => {
+      // Use version hash for cache-busting if available
+      const version = window.DOUGHCO_PRODUCTS_VERSION || Date.now();
+      const src = `${CONFIG.CDN_BASE}/${CONFIG.REPO}/doughandco@main/${GITHUB_PATH}?v=${version}`;
+      
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      
+      const timeout = setTimeout(() => {
+        script.remove();
+        reject(new Error('CDN timeout'));
+      }, 5000);
+      
+      script.onload = () => {
+        clearTimeout(timeout);
+        if (window.DOUGHCO_PRODUCTS && Array.isArray(window.DOUGHCO_PRODUCTS)) {
+          resolve(window.DOUGHCO_PRODUCTS);
+        } else {
+          reject(new Error('Invalid CDN response'));
+        }
+      };
+      
+      script.onerror = () => {
+        clearTimeout(timeout);
+        script.remove();
+        reject(new Error('CDN load error'));
+      };
+      
+      document.head.appendChild(script);
+    });
+  }
+  
+  function fetchFreshProducts() {
+    return fetch(`${CONFIG.API_FALLBACK}?prefix=cb`)
+      .then(res => res.text())
+      .then(code => {
+        // JSONP-style callback execution
+        return new Promise(resolve => {
+          window.cb = (data) => {
+            delete window.cb;
+            resolve(data.products || []);
+          };
+          try { eval(code); } catch { window.cb({ products: [] }); }
+        });
+      });
+  }
+  
+  // Expose to global scope
+  window.DoughCoLoader = { loadProducts, CONFIG };
+  
+  // Auto-load if renderProducts exists
+  if (typeof window.renderProducts === 'function') {
+    document.addEventListener('DOMContentLoaded', () => {
+      window.DoughCoLoader.loadProducts(window.renderProducts);
+    });
+  }
+})();
+</script>
 </body>
 </html>
